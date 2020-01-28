@@ -1,7 +1,7 @@
 /*==============================================================*/
 /* Jonathan Aldridge and Landen Batte                           */
 /* ELEC 3040/3050 - Lab 3                                       */
-/* Toggle LED1 while button pressed, with short delay inserted  */
+/* Count in two different directions, with switches to control. */
 /*==============================================================*/
 
 #include "STM32L1xx.h"
@@ -78,8 +78,8 @@ void count (unsigned char dir) {
 	GPIOC->BSRR |= (~counter1 & 0x0F) << 16;	// clear bits
 	GPIOC->BSRR |= (counter1 & 0x0F); // write bits
 	
-	GPIOC->BSRR |= (~counter2 & 0xF0) << 16; // clear bits
-	GPIOC->BSRR |= (counter2 & 0xF0); // write bits
+	GPIOC->BSRR |= 0xF0 << 16; // clear bits
+	GPIOC->BSRR |= counter2 << 4; // write bits
 }
 
 /*------------------------------------------------*/
