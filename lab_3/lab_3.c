@@ -29,24 +29,7 @@ void pin_setup () {
 	GPIOC->MODER |= (0x00005555); /* General purpose output mode*/
 }
 
-int main (void) {
-	
-	pin_setup();
-	
-	unsigned char direction = 0; // initial direction
-	unsigned char enable = 0; // enable/disable counter
-	counter1 = 0;
-	counter2 = 0;
-	
-	while (1) {
-		direction = GPIOA->IDR & 0x00000004;
-		enable = GPIOA->IDR & 0x00000002;
-		if (enable != 0) {
-			count(direction);
-		}
-		delay();
-	} // repeat forever
-}
+
 
 /*------------------------------------------------*/
 /* Delay function - generates ~0.5 seconds of */
@@ -86,3 +69,21 @@ void count (unsigned char dir) {
 /* Main program */
 /*------------------------------------------------*/
 
+int main (void) {
+	
+	pin_setup();
+	
+	unsigned char direction = 0; // initial direction
+	unsigned char enable = 0; // enable/disable counter
+	counter1 = 0;
+	counter2 = 0;
+	
+	while (1) {
+		direction = GPIOA->IDR & 0x00000004;
+		enable = GPIOA->IDR & 0x00000002;
+		if (enable != 0) {
+			count(direction);
+		}
+		delay();
+	} // repeat forever
+}
