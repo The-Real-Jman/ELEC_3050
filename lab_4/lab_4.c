@@ -1,7 +1,7 @@
 /*==============================================================*/
 /* Jonathan Aldridge and Landen Batte                           */
 /* ELEC 3040/3050 - Lab 4                                       */
-/* Count in two different directions, with switches to control. */
+/* Count in two different directions, with buttons to control.  */
 /*==============================================================*/
 
 #include "STM32L1xx.h"
@@ -24,7 +24,7 @@ unsigned char led8;
 unsigned char led9;
 
 /*------------------------------------------------*/
-/* Initialize GPIO pins used in the program */
+/* Initialize GPIO pins used in the program 			*/
 /*------------------------------------------------*/
 
 void pin_setup () {
@@ -36,6 +36,10 @@ void pin_setup () {
 	GPIOC->MODER &= ~(0x000FFFFF); /* Clear PC9 - PC0 mode bits */
 	GPIOC->MODER |= (0x00055555); /* General purpose output mode*/
 }
+
+/*------------------------------------------------*/
+/* Initialize interrupt pins used in the program  */
+/*------------------------------------------------*/
 
 void interrupt_setup() {
 	SYSCFG->EXTICR[0] &= ~(0x000F); //Clear & set PA0
@@ -49,18 +53,18 @@ void interrupt_setup() {
 	
 	EXTI->PR |= 0x0003; // clear pending status
 	
-	NVIC_EnableIRQ(EXTI0_IRQn);
-	NVIC_EnableIRQ(EXTI1_IRQn);
+	NVIC_EnableIRQ(EXTI0_IRQn); // enable EXTI0 interrupt
+	NVIC_EnableIRQ(EXTI1_IRQn); // enable EXTI1 interrupt
 	
-	NVIC_ClearPendingIRQ(EXTI0_IRQn);
-	NVIC_ClearPendingIRQ(EXTI1_IRQn);
+	NVIC_ClearPendingIRQ(EXTI0_IRQn); // clear pending flag for EXTI0
+	NVIC_ClearPendingIRQ(EXTI1_IRQn); // clear pending flag for EXTI1
 }
 
 
 
 /*------------------------------------------------*/
-/* Delay function - generates ~0.5 seconds of */
-/* delay. */
+/* Delay function - generates ~0.5 seconds of 		*/
+/* delay. 																				*/
 /*------------------------------------------------*/
 
 void delay () {
@@ -72,6 +76,7 @@ void delay () {
 	}
 }
 
+// Small delay method to attempt to fix some button debouncing
 void small_delay() {
 	int i;
 	for (i = 0; i < 10000; i++) {
@@ -79,8 +84,9 @@ void small_delay() {
 	}
 }
 
+
 /*------------------------------------------------*/
-/* Counts through the program. */
+/* Counts through the program. 										*/
 /*------------------------------------------------*/
 
 void count1 () {
@@ -88,14 +94,17 @@ void count1 () {
 }
 
 void count2() {
-	if (count2_dir){
-		counter2 = (counter2 + 1) % 10;
+	if (count2_dir){ // if counting up
+		counter2 = (counter2 + 1) % 10; // rolls counter from 9 to 0
 	}
 	else{
-		counter2 = (counter2 + (10 - 1)) % 10;
+		counter2 = (counter2 + (10 - 1)) % 10; //  rolls counter from 0 to 9
 	}
 }
 
+/*------------------------------------------------*/
+/* Function to update leds in waveforms.					*/
+/*------------------------------------------------*/
 
 void update_leds() {
 	GPIOC->BSRR |= 0x0F << 16;	// clear bits
@@ -105,30 +114,38 @@ void update_leds() {
 	GPIOC->BSRR |= counter2 << 4; // write bits
 }
 
+/*------------------------------------------------*/
+/* External interrupt 0 function.									*/
+/*------------------------------------------------*/
+
 void EXTI0_IRQHandler() {
 	EXTI->PR |= 0x0001;
 	count2_dir = 0;
 	if (led8) {
-		GPIOC->BSRR |= 0x0100 << 16;
+		GPIOC->BSRR |= 0x0100 << 16; // update led8 to turn off
 		led8 = 0;
 	}
 	else {
-		GPIOC->BSRR |= 0x0100;
+		GPIOC->BSRR |= 0x0100; //  update led8 to turn on
 		led8 = 1;
 	}
 	small_delay();
 	NVIC_ClearPendingIRQ(EXTI0_IRQn);
 }
 
+/*------------------------------------------------*/
+/* External interrupt 1 function.									*/
+/*------------------------------------------------*/
+
 void EXTI1_IRQHandler() {
 	EXTI->PR |= 0x0002;
 	count2_dir = 1;
 	if(led9){
-		GPIOC->BSRR |= 0x0200 << 16;
+		GPIOC->BSRR |= 0x0200 << 16; // update led9 to turn off
 		led9 = 0;
 	}
 	else {
-		GPIOC->BSRR |= 0x0200;
+		GPIOC->BSRR |= 0x0200; // update led9 to turn off
 		led9 = 1;
 	}
 	small_delay();
@@ -136,31 +153,31 @@ void EXTI1_IRQHandler() {
 }
 
 /*------------------------------------------------*/
-/* Main program */
+/* Main program 																	*/
 /*------------------------------------------------*/
 
 int main (void) {
 	
-	pin_setup();
-	interrupt_setup();
+	pin_setup(); // Set up pins
+	interrupt_setup(); // Set up interrupts
 
 	counter1 = 0;
 	counter2 = 0;
 	count2_dir = 1;
-	GPIOC->BSRR |= 0x0100 << 16;
+	GPIOC->BSRR |= 0x0100 << 16; // set LED8 to off
 	led8 = 0;
-	GPIOC->BSRR |= 0x0200;
+	GPIOC->BSRR |= 0x0200; // set LED9 to on
 	led9 = 1;
 	
-	__enable_irq();
+	__enable_irq(); // enable interrupts
 	
 	while (1) {
-		delay();
-		count1();
-		update_leds();
-		delay();
-		count1();
-		count2();
-		update_leds();
+		delay(); // delay function
+		count1(); // call function to increment counter1
+		update_leds(); // update leds in waveforms
+		delay(); // delay function
+		count1(); // call function to increment counter1
+		count2(); // call function to increment/decrement counter2
+		update_leds(); // update leds in waveforms
 	} // repeat forever
 }
