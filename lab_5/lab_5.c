@@ -56,9 +56,6 @@ void pin_setup () {
 	GPIOB->PUPDR &= ~(0x0000000FF);
 	GPIOB->PUPDR |= (0x000000055);
 	
-	//GPIOB->PUPDR &= ~(0x00000FF00);
-	//GPIOB->PUPDR |= (0x000005500);
-	
 	/* Configure PC8,PC9 as output pins to drive LEDs */
 	RCC->AHBENR |= 0x04; /* Enable GPIOC clock (bit 2) */
 	GPIOC->MODER &= ~(0x000000FF); /* Clear PC9 - PC0 mode bits */
@@ -94,6 +91,9 @@ void interrupt_setup() {
 /*------------------------------------------------*/
 
 void delay () {
+	if (keypad1.event) {
+		keypad1.event--;
+	}
 	int i,j,n;
 	for (i = 0; i < 20; i++) { // outer loop
 		for (j = 0; j < 20000; j++) {	// inner loop
@@ -205,6 +205,7 @@ void EXTI1_IRQHandler() {
 	GPIOB->PUPDR &= ~(0x000000FF);
 	GPIOB->PUPDR &= (0x00000055);
 	
+	EXTI->PR |= 0x0002;
 	NVIC_ClearPendingIRQ(EXTI1_IRQn);
 }
 
@@ -225,11 +226,8 @@ int main (void) {
 		delay(); // delay function
 		counter = (counter + 1) % 10; // rolls counter from 9 to 0
 		// count(); // call function to increment counter
-		if (keypad1.event) {
-			keypad1.event--;
-		}
-		else {
-			update_leds(counter); // update leds in waveforms
+		if (keypad1.event == 0) {
+			update_leds(counter);
 		}
 	} // repeat forever
 }

@@ -64,7 +64,7 @@ void pin_setup () {
 	//GPIOB->PUPDR &= ~(0x00000FF00);
 	//GPIOB->PUPDR |= (0x000005500);
 	
-	/* Configure PC8,PC9 as output pins to drive LEDs */
+	/* Configure PC[0 - 7] as output pins to drive LEDs */
 	RCC->AHBENR |= 0x04; /* Enable GPIOC clock (bit 2) */
 	GPIOC->MODER &= ~(0x0000FFFF); /* Clear PC9 - PC0 mode bits */
 	GPIOC->MODER |= (0x00005555); /* General purpose output mode*/
@@ -87,8 +87,10 @@ void interrupt_setup() {
 	EXTI->PR |= 0x0002; // clear pending status
 
 	NVIC_EnableIRQ(EXTI1_IRQn); // enable EXTI1 interrupt
+	NVIC_EnableIRQ(TIM10_IRQn);
 	
 	NVIC_ClearPendingIRQ(EXTI1_IRQn); // clear pending flag for EXTI1
+	NVIC_ClearPendingIRQ(TIM10_IRQn);
 }
 
 /*------------------------------------------------*/
@@ -97,8 +99,8 @@ void interrupt_setup() {
 
 void timer_setup(){
 	SET_BIT(RCC->APB2ENR, RCC_APB2ENR_TIM10EN);
-	TIM10->ARR = ;
-	TIM10->PSC = ;
+	TIM10->ARR = 0x333;
+	TIM10->PSC = 0xFF;
 	SET_BIT(TIM10->DIER, TIM_DIER_UIE);
 }
 
@@ -126,7 +128,7 @@ int read_row() {
 	GPIOB->PUPDR &= ~(0x000000FF);
 	GPIOB->PUPDR |= (0x00000055);
 	
-	//small_delay();
+	small_delay();
 	
 	int input = GPIOB->IDR & 0xF0;
 	switch(input) {
@@ -154,7 +156,7 @@ int read_column() {
 	GPIOB->PUPDR &= ~(0x0000FF00);
 	GPIOB->PUPDR |= (0x00005500);
 	
-	//small_delay();
+	small_delay();
 	
 	int input = GPIOB->IDR & 0xF0;
 	switch(input) {
@@ -217,6 +219,7 @@ void TIM10_IRQHandler() {
 	} 
  
   NVIC_ClearPendingIRQ(TIM10_IRQn);
+	EXTI->PR |= 0x0002;
 }
 
 /*------------------------------------------------*/
@@ -244,7 +247,7 @@ int main (void) {
 		else if (keypad1.event == 1 && !running){
 			counter.first = 0;
 			counter.second = 0;
-			// GPIOC->BSRR = 0xFF0000;
+			GPIOC->BSRR = 0xFF0000;
 			keypad1.event = ~0;
 		}
 	} // repeat forever
