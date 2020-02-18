@@ -9,7 +9,7 @@
 // function definitions
 void delay();
 void small_delay();
-void count(unsigned char counter);
+// void count();
 void pin_setup();
 void interrupt_setup();
 void EXTI1_IRQHandler();
@@ -17,8 +17,8 @@ void update_leds(unsigned char counter);
 
 // global variables
 struct{
-	unsigned char row;
-	unsigned char column;
+	int row;
+	int column;
 	unsigned char event;
 	unsigned char row1[4];
 	unsigned char row2[4];
@@ -26,6 +26,8 @@ struct{
 	unsigned char row4[4];
 	const unsigned char* keys[];
 } typedef matrix_keypad;
+
+
 
 matrix_keypad keypad1 = {
 	.row = ~0,
@@ -38,8 +40,6 @@ matrix_keypad keypad1 = {
 	.keys = {keypad1.row1, keypad1.row2, keypad1.row3, keypad1.row4},
 };
 
-int bounce = 0;
-
 /*------------------------------------------------*/
 /* Initialize GPIO pins used in the program 			*/
 /*------------------------------------------------*/
@@ -51,12 +51,13 @@ void pin_setup () {
 		
 	RCC->AHBENR |= 0x02;
 	GPIOB->MODER &= ~(0x0000FFFF);
+	GPIOB->MODER |= (0x00005500);
 	
 	GPIOB->PUPDR &= ~(0x0000000FF);
 	GPIOB->PUPDR |= (0x000000055);
 	
-	GPIOB->PUPDR &= ~(0x00000FF00);
-	GPIOB->PUPDR |= (0x000005500);
+	//GPIOB->PUPDR &= ~(0x00000FF00);
+	//GPIOB->PUPDR |= (0x000005500);
 	
 	/* Configure PC8,PC9 as output pins to drive LEDs */
 	RCC->AHBENR |= 0x04; /* Enable GPIOC clock (bit 2) */
@@ -71,7 +72,7 @@ void pin_setup () {
 
 void interrupt_setup() {
 	
-	SYSCFG->EXTICR[0] &= ~(0x00F0); // Clear PA1
+	SYSCFG->EXTICR[0] &= 0xFF0F; // Clear PA1
 	SYSCFG->EXTICR[0] |= 0x0010; // Set PA1
 	
 	EXTI->FTSR |= 0x0002; // Set EXTI0 & EXTI1 to rising-edge
@@ -109,22 +110,74 @@ void small_delay() {
 	}
 }
 
-
-/*------------------------------------------------*/
-/* Counts through the program. 										*/
-/*------------------------------------------------*/
-
-void count (unsigned char counter) {
-		counter = (counter + 1) % 10; // rolls counter from 9 to 0
-}
-
 /*------------------------------------------------*/
 /* Function to update leds in waveforms.					*/
 /*------------------------------------------------*/
 
-void update_leds(unsigned char counter) {
-	GPIOC->BSRR |= 0x0F << 16;	// clear bits
-	GPIOC->BSRR |= counter; // write bits
+void update_leds(unsigned char count) {
+	
+	GPIOC->BSRR |= (~count & 0x0F) << 16;
+	GPIOC->BSRR |= (count & 0x0F);
+	
+	
+	//GPIOC->BSRR |= 0x0F << 16;	// clear bits
+	//GPIOC->BSRR |= count; // write bits
+}
+
+/*------------------------------------------------*/
+/* Reads the row of the pressed key.							*/
+/*------------------------------------------------*/
+
+int read_row() {
+	GPIOB->MODER &= ~(0x0000FFFF);
+	GPIOB->MODER |= (0x00005500);
+	GPIOB->ODR = 0;
+	GPIOB->PUPDR &= ~(0x000000FF);
+	GPIOB->PUPDR |= (0x00000055);
+	
+	//small_delay();
+	
+	int input = GPIOB->IDR & 0xF0;
+	switch(input) {
+		case 0xE:
+				return 0;
+		case 0xD:
+				return 1;
+		case 0xB:
+				return 2;
+		case 0x7:
+				return 3;
+		default:
+				return -1;
+	}
+}
+
+/*------------------------------------------------*/
+/* Reads the column of the pressed key.						*/
+/*------------------------------------------------*/
+
+int read_column() {
+	GPIOB->MODER &= ~(0x0000FFFF);
+	GPIOB->MODER |= (0x00000055);
+	GPIOB->ODR = 0;
+	GPIOB->PUPDR &= ~(0x0000FF00);
+	GPIOB->PUPDR |= (0x00005500);
+	
+	//small_delay();
+	
+	int input = GPIOB->IDR & 0xF0;
+	switch(input) {
+		case 0xE:
+				return 0;
+		case 0xD:
+				return 1;
+		case 0xB:
+				return 2;
+		case 0x7:
+				return 3;
+		default:
+				return -1;
+	}
 }
 
 /*------------------------------------------------*/
@@ -134,28 +187,24 @@ void update_leds(unsigned char counter) {
 void EXTI1_IRQHandler() {
 	EXTI->PR |= 0x0002;
 	
-	const int COLUMN_MASK[] = {(GPIOB->BSRR & 0x10), (GPIOB->BSRR & 0x20), (GPIOB->BSRR & 0x40), (GPIOB->BSRR & 0x80)};
-	const int ROW_MASK[] = {(GPIOB->IDR & 0x01), (GPIOB->IDR & 0x02), (GPIOB->IDR & 0x04), (GPIOB->IDR & 0x08)};
+	keypad1.row = read_row();
+	keypad1.column = read_column();
 	
-	for (keypad1.column = 0; keypad1.column < 4; keypad1.column++){
-		GPIOB->BSRR |= 0x000000F0;
-		GPIOB->BSRR &= COLUMN_MASK[keypad1.column];
-		
-		for (keypad1.row = 0; keypad1.row < 4; keypad1.row++){
-			small_delay();
-			unsigned short temp = (GPIOB->IDR & ROW_MASK[keypad1.row]);
-			
-			if(!temp) {
-				keypad1.event = 4;
-				update_leds(keypad1.keys[keypad1.row][keypad1.column]);
-				GPIOB->BSRR |= 0x00F00000;
-				NVIC_ClearPendingIRQ(EXTI1_IRQn);
-				return;
-			}
-		}
+	if (keypad1.row != -1 && keypad1.column != -1){
+		keypad1.event = 4;
+		update_leds(keypad1.keys[keypad1.row][keypad1.column]);
 	}
 	
-	GPIOB->BSRR |= 0x00F00000;
+	GPIOB->MODER &= ~(0x0000FFFF);
+	GPIOB->PUPDR &= ~(0x0000FF00);
+	GPIOB->PUPDR |= (0x00005500);
+	
+	GPIOB->MODER &= ~(0x0000FFFF);
+	GPIOB->MODER &= ~(0x00005500);
+	GPIOB->ODR = 0;
+	GPIOB->PUPDR &= ~(0x000000FF);
+	GPIOB->PUPDR &= (0x00000055);
+	
 	NVIC_ClearPendingIRQ(EXTI1_IRQn);
 }
 
@@ -169,13 +218,13 @@ int main (void) {
 	interrupt_setup(); // Set up interrupts
 
 	unsigned char counter = 0;
-	GPIOB->BSRR |= 0x00F00000;
 	
 	__enable_irq(); // enable interrupts
 	
 	while (1) {
 		delay(); // delay function
-		count(counter); // call function to increment counter
+		counter = (counter + 1) % 10; // rolls counter from 9 to 0
+		// count(); // call function to increment counter
 		if (keypad1.event) {
 			keypad1.event--;
 		}
