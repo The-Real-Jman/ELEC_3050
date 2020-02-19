@@ -57,16 +57,14 @@ void pin_setup () {
 	RCC->AHBENR |= 0x02;
 	GPIOB->MODER &= ~(0x0000FF00);
 	GPIOB->MODER |= (0x00005500);
+	GPIOB->ODR = 0;
 	
 	GPIOB->PUPDR &= ~(0x0000000FF);
 	GPIOB->PUPDR |= (0x000000055);
 	
-	//GPIOB->PUPDR &= ~(0x00000FF00);
-	//GPIOB->PUPDR |= (0x000005500);
-	
 	/* Configure PC[0 - 7] as output pins to drive LEDs */
 	RCC->AHBENR |= 0x04; /* Enable GPIOC clock (bit 2) */
-	GPIOC->MODER &= ~(0x0000FFFF); /* Clear PC9 - PC0 mode bits */
+	GPIOC->MODER &= ~(0x0000FFFF); /* Clear PC7 - PC0 mode bits */
 	GPIOC->MODER |= (0x00005555); /* General purpose output mode*/
 
 }
@@ -130,7 +128,7 @@ int read_row() {
 	
 	small_delay();
 	
-	int input = GPIOB->IDR & 0xF0;
+	int input = GPIOB->IDR & 0xF;
 	switch(input) {
 		case 0xE:
 				return 0;
@@ -158,15 +156,15 @@ int read_column() {
 	
 	small_delay();
 	
-	int input = GPIOB->IDR & 0xF0;
+	int input = GPIOB->IDR&0xF0;
 	switch(input) {
-		case 0xE:
+		case 0xE0:
 				return 0;
-		case 0xD:
+		case 0xD0:
 				return 1;
-		case 0xB:
+		case 0xB0:
 				return 2;
-		case 0x7:
+		case 0x70:
 				return 3;
 		default:
 				return -1;
@@ -183,9 +181,8 @@ void EXTI1_IRQHandler() {
 	keypad1.row = read_row();
 	keypad1.column = read_column();
 	
-	if (keypad1.row != -1 && keypad1.column != -1){
-		keypad1.event = 4;
-		update_leds(keypad1.keys[keypad1.row][keypad1.column]);
+	if(keypad1.row != -1 && keypad1.column != -1){
+		keypad1.event = keypad1.keys[keypad1.row] [keypad1.column];
 	}
 	
 	GPIOB->MODER &= ~(0x0000FFFF);
@@ -199,6 +196,7 @@ void EXTI1_IRQHandler() {
 	GPIOB->PUPDR &= (0x00000055);
 	
 	NVIC_ClearPendingIRQ(EXTI1_IRQn);
+	EXTI->PR |= 0x0002;
 }
 
 /*------------------------------------------------*/
@@ -219,7 +217,7 @@ void TIM10_IRQHandler() {
 	} 
  
   NVIC_ClearPendingIRQ(TIM10_IRQn);
-	EXTI->PR |= 0x0002;
+	//EXTI->PR |= 0x0002;
 }
 
 /*------------------------------------------------*/
