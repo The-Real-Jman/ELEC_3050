@@ -82,9 +82,9 @@ void interrupt_setup() {
 	SYSCFG->EXTICR[0] &= 0xFF0F; // Clear PA1
 	SYSCFG->EXTICR[0] |= 0x0010; // Set PA1
 	
-	EXTI->FTSR |= 0x0002; // Set EXTI0 & EXTI1 to rising-edge
+	EXTI->FTSR |= 0x0002; // Set EXTI1 to rising-edge
 	
-	EXTI->IMR |= 0x0002; // Enable EXTI0 & EXTI1
+	EXTI->IMR |= 0x0002; // Enable EXTI1
 	
 	EXTI->PR |= 0x0002; // clear pending status
 
@@ -200,7 +200,7 @@ void EXTI1_IRQHandler() {
 		// Key was pressed
 		pressed = 1;
 		// Update LEDs
-		MODIFY_REG(GPIOC->ODR, 0x000F, keypad1.event);
+		MODIFY_REG(GPIOC->ODR, 0x00F0, keypad1.event);
 	}
 	
 	GPIOB->MODER &= ~(0x0000FFFF);
@@ -232,6 +232,7 @@ int main (void) {
 	while (1) {
 		// Checks if a button was pressed and if that button was 0 - A
 		if (keypad1.event < 11 && pressed == 1) {
+			// Sets duty cycle based on key pressed
 			TIM10->CCR1 = keypad1.event * (TIM10->ARR + 1) / 10;
 			pressed = 0;
 		}
