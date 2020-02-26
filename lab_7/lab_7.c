@@ -1,10 +1,14 @@
 /*==============================================================*/
-/* Jonathan Aldridge and Landen Batte                           */
-/* ELEC 3040/3050 - Lab 7	                                    */
-/* Output a PWM signal based on keypad button press.		    */
+/* Jonathan Aldridge and Landen Batte */
+/* ELEC 3040/3050 - Lab 7 */
+/* Output a PWM signal based on keypad button press. */
 /*==============================================================*/
 
 #include "STM32L1xx.h"
+
+/*------------------------------------------------*/
+/* Global variable & structures. */
+/*------------------------------------------------*/
 
 // function definitions
 void small_delay();
@@ -45,7 +49,7 @@ matrix_keypad keypad1 = {
 };
 
 /*------------------------------------------------*/
-/* Initialize GPIO pins used in the program.	*/
+/* Initialize GPIO pins used in the program. */
 /*------------------------------------------------*/
 
 void pin_setup () {
@@ -120,7 +124,7 @@ void timer_setup() {
 
 void small_delay() {
 	int i;
-	for (i = 0; i < 10; i++) {
+	for (i = 0; i < 100; i++) {
 		asm("nop");
 	}
 }
@@ -200,7 +204,7 @@ void EXTI1_IRQHandler() {
 		// Key was pressed
 		pressed = 1;
 		// Update LEDs
-		MODIFY_REG(GPIOC->ODR, 0x00F0, keypad1.event);
+		GPIOC->ODR = keypad1.event;
 	}
 	
 	GPIOB->MODER &= ~(0x0000FFFF);
